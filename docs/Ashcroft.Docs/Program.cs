@@ -27,11 +27,14 @@ builder.Services.AddPennington(penn =>
     });
 });
 
-// Styling + syntax theme, served at /styles.css. The whole page is styled from AshcroftStyles.Css.
+// Styling + syntax theme, served at /styles.css. Rendered-Markdown typography is a prose
+// customization (AshcroftStyles.ExtendProse) layered over Pennington's defaults; the page
+// tokens and the JS / code-bar chrome that utilities can't reach come from AshcroftStyles.Css.
 builder.Services.AddMonorailCss(_ => new MonorailCssOptions
 {
     ColorScheme = new AlgorithmicColorScheme { PrimaryHue = 259, Chroma = 0.14 },
     SyntaxTheme = SyntaxTheme.Default,
+    ExtendProseCustomization = AshcroftStyles.ExtendProse,
     ExtraStyles = AshcroftStyles.Css,
 });
 

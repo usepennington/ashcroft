@@ -1,7 +1,7 @@
 @* Root document: the static head plus the copy-button script. Per-page content
    (and the <title> via PageTitle/HeadOutlet) comes from the routed component. *@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth scroll-pt-[90px]">
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -23,7 +23,7 @@
     <link rel="stylesheet" href="/styles.css"/>
     <HeadOutlet/>
 </head>
-<body class="bg-base-50 text-base-900 antialiased">
+<body class="bg-base-50 text-base-900 antialiased text-[17px] leading-[1.65] selection:bg-[var(--acc-weak)]">
     <Routes/>
 
     <script>

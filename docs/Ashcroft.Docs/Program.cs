@@ -9,6 +9,10 @@ using Pennington.TreeSitter;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// The generated sample inputs (assets/hero.png etc.) are gitignored, so a fresh checkout
+// (CI included) must create them before any sample renders.
+SampleAssets.EnsureInputs(builder.Environment.ContentRootPath);
+
 // Core Pennington: parser, renderer, highlighting, sitemap, llms.txt, plus the Markdown source
 // that discovers Content/index.md and gives it the route "/".
 builder.Services.AddPennington(penn =>

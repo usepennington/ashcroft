@@ -1,8 +1,11 @@
 # Static build output
 output/
 
-# Sample INPUT images are generated at startup (SampleAssets), not committed
-assets/
+# Sample INPUT images are generated at startup (SampleAssets), not committed.
+# The Space Grotesk font (and its OFL license) IS committed — it can't be generated.
+assets/hero.png
+assets/avatar.png
+assets/logo.png
 
 # Build artifacts
 bin/

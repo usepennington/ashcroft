@@ -69,7 +69,8 @@ else
 
 @code {
     // MinVer stamps the library's informational version at build time (Release only; Debug
-    // builds carry the 1.0.0 default). Strip the "+<sha>" build metadata for display.
+    // builds carry the 1.0.0 default). Show the release line (major.minor): commits after a
+    // tag carry MinVer's patch-bump prerelease (e.g. 0.1.1-alpha.0.2), which isn't released.
     private static readonly string LibVersion = GetLibVersion();
 
     private static string GetLibVersion()
@@ -77,8 +78,8 @@ else
         var info = typeof(Ashcroft.CardBuilder).Assembly
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
             .InformationalVersion ?? "1.0.0";
-        var plus = info.IndexOf('+');
-        return plus >= 0 ? info[..plus] : info;
+        var v = Version.Parse(info.Split('-', '+')[0]);
+        return $"{v.Major}.{v.Minor}";
     }
 
     [Parameter] public string? Path { get; set; }

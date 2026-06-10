@@ -1,0 +1,57 @@
+@* Root document: the static head plus the copy-button script. Per-page content
+   (and the <title> via PageTitle/HeadOutlet) comes from the routed component. *@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <meta name="description" content="Generate Open Graph images, X cards, and blog headers from C#."/>
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;450;500;600;700&family=Geist+Mono:wght@400;450;500&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="/styles.css"/>
+    <HeadOutlet/>
+</head>
+<body class="bg-base-50 text-base-900 antialiased">
+    <Routes/>
+
+    <script>
+    (function () {
+      "use strict";
+
+      function wireCopy(btn, getText) {
+        btn.addEventListener("click", function () {
+          if (navigator.clipboard) navigator.clipboard.writeText(getText());
+          var prev = btn.textContent;
+          btn.textContent = "Copied";
+          setTimeout(function () { btn.textContent = prev; }, 1400);
+        });
+      }
+
+      var install = document.getElementById("install-copy");
+      if (install) wireCopy(install, function () { return "dotnet add package Ashcroft"; });
+
+      var blocks = Array.prototype.slice.call(document.querySelectorAll(".prose .code-highlight-wrapper"));
+      document.querySelectorAll(".prose pre").forEach(function (p) {
+        if (!p.closest(".code-highlight-wrapper")) blocks.push(p);
+      });
+      blocks.forEach(function (block) {
+        if (block.querySelector(".copy-btn")) return;
+        var code = block.querySelector("code") || block;
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "copy-btn";
+        btn.textContent = "Copy";
+        var head = block.querySelector(".codeblock-head");
+        if (head) {
+          head.appendChild(btn);
+        } else {
+          block.style.position = "relative";
+          block.appendChild(btn);
+        }
+        wireCopy(btn, function () { return code.textContent; });
+      });
+    })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+# Static build output
+output/
+
+# Sample INPUT images are generated at startup (SampleAssets), not committed
+assets/
+
+# Build artifacts
+bin/
+obj/

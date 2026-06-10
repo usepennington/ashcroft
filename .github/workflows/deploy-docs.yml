@@ -1,0 +1,78 @@
+# Deploys the Ashcroft.Docs Pennington site to GitHub Pages on every push to main.
+#
+# The site serves under the repository sub-path https://<user>.github.io/<repo>/, so the Pennington
+# build needs a matching base URL (derived from the repo name) to rewrite internal anchors, CSS, JS,
+# and data URLs under /<repo>/.
+#
+# Repo-specific build notes:
+#   - The docs project pins its own .NET 11 preview SDK via docs/Ashcroft.Docs/global.json, while
+#     the library builds on the .NET 10 SDK pinned by the root global.json. setup-dotnet installs
+#     both; the docs build step runs from the docs directory so its global.json wins there.
+#   - The header version badge reads the MinVer-stamped informational version off the Ashcroft
+#     assembly, so checkout needs full history + tags (fetch-depth: 0) for the version to resolve.
+#   - Pennington emits underscore folders (_content/, _framework/); the .nojekyll marker stops
+#     GitHub Pages' Jekyll step from silently stripping them.
+name: Deploy docs to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One Pages deploy at a time; let an in-flight deploy finish rather than cancelling it.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # MinVer derives the docs' version badge from tags
+
+      # global-json-file installs the .NET 11 preview SDK the docs pin; 10.0.x covers the
+      # root-pinned SDK for the library project the docs reference.
+      # NOTE: keep dotnet-version entries as bare versions — inline comments inside the block
+      # scalar are parsed as part of the version string and break setup-dotnet.
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: docs/Ashcroft.Docs/global.json
+          dotnet-version: 10.0.x
+
+      # Pennington's "build" mode writes the static site to <content-root>/output, i.e. the docs
+      # project directory (not the repo root). --no-launch-profile skips launchSettings.json, which
+      # forces ASPNETCORE_ENVIRONMENT=Development, so the published HTML is built as Production.
+      # Run from the docs directory so its global.json selects the preview SDK.
+      - name: Build static site
+        working-directory: docs/Ashcroft.Docs
+        env:
+          BASE_URL: /${{ github.event.repository.name }}
+        run: dotnet run -c Release --no-launch-profile -- build "$BASE_URL"
+
+      - name: Disable Jekyll processing
+        run: touch docs/Ashcroft.Docs/output/.nojekyll
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/Ashcroft.Docs/output
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

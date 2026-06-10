@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>preview</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Pennington" Version="0.1.0-alpha.0.296" />
+    <PackageReference Include="Pennington.MonorailCss" Version="0.1.0-alpha.0.296" />
+    <PackageReference Include="Pennington.TreeSitter" Version="0.1.0-alpha.0.296" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Ashcroft\Ashcroft.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Watch Include="Content\**\*.*" />
+  </ItemGroup>
+
+</Project>

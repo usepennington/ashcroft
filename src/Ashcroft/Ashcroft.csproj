@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>Ashcroft</RootNamespace>
+    <AssemblyName>Ashcroft</AssemblyName>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- Public API is intentionally documented; suppress missing-XML-doc noise. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <Description>Social card / Open Graph image generation for .NET. Fluent C# API rendered with SkiaSharp; all text shaped with HarfBuzz — wrapping, shrink-to-fit, emoji/CJK fallback, and automatic legibility scrims.</Description>
+    <PackageTags>opengraph;og-image;social-cards;skiasharp;harfbuzz;image-generation</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SkiaSharp" Version="3.119.4" />
+    <PackageReference Include="SkiaSharp.HarfBuzz" Version="3.119.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Ashcroft.Tests" />
+  </ItemGroup>
+
+</Project>

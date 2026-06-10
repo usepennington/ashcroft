@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/docs/">
+    <Project Path="docs/Ashcroft.Docs/Ashcroft.Docs.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Ashcroft/Ashcroft.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Ashcroft.Tests/Ashcroft.Tests.csproj" />
+  </Folder>
+</Solution>

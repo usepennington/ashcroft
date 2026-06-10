@@ -1,0 +1,31 @@
+## .NET build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+*.user
+
+## Rider / VS
+.idea/
+.vs/
+
+## Test / coverage artifacts
+[Tt]est[Rr]esults/
+*.received.png
+*.received.*
+
+## Snapshot baselines resolve system fonts, so they are platform-specific.
+## They self-seed on first run per machine (including CI) — do not commit them.
+tests/Ashcroft.Tests/Approved/
+
+## NuGet pack output
+*.nupkg
+*.snupkg
+nupkg/
+artifacts/
+
+## Docs static site build
+output/
+
+## Local tooling
+.claude/

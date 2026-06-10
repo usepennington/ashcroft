@@ -21,6 +21,7 @@
        Windows/macOS get them from SkiaSharp itself. Mirrors Ashcroft.Tests. -->
   <ItemGroup Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Linux)))' == 'true'">
     <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="3.119.4" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.Linux" Version="8.3.1.5" />
   </ItemGroup>
 
   <ItemGroup>

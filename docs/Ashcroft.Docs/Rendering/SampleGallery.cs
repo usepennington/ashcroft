@@ -13,6 +13,7 @@ public static class SampleGallery
     public static readonly IReadOnlyDictionary<string, Func<CardBuilder>> Samples =
         new Dictionary<string, Func<CardBuilder>>
         {
+            ["og"]         = CardSamples.Self,
             ["minimum"]    = CardSamples.MinimumViable,
             ["scrim"]      = CardSamples.ImageBackgroundWithScrim,
             ["scrim-off"]  = CardSamples.ImageBackgroundWithoutScrim,

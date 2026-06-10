@@ -55,6 +55,19 @@ public static class CardSamples
                     .Meta("Phil Scott · June 2026")));
     }
 
+    // The card you're looking at: Ashcroft's own Open Graph image, rendered by Ashcroft.
+    // Wired into the docs <head> as og:image — the library on its own marketing surface.
+    public static CardBuilder Self()
+    {
+        return SocialCard.Create()
+            .Background(Backgrounds.RadialGradient("#1e1b4b", "#0b1020"))
+            .At(Anchor.Center, s => s
+                .Title("Ashcroft")
+                .Subtitle("Social cards for .NET — fluent C#, SkiaSharp, HarfBuzz")
+                .Spacer(8)
+                .Meta("dotnet add package Ashcroft", color: "#a7f3d0"));
+    }
+
     // A generative background drawn straight onto the raw SKCanvas, with a custom theme color.
     public static CardBuilder Generative()
     {

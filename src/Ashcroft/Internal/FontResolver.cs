@@ -3,15 +3,14 @@ using SkiaSharp;
 namespace Ashcroft.Internal;
 
 /// <summary>
-/// Resolves typefaces from a <see cref="Theme"/> and per-element overrides. A missing family
-/// silently falls back down the chain (requested → Segoe UI → Helvetica Neue → platform sans);
-/// libraries shouldn't crash a build over a font. The chosen family is reported to
-/// <see cref="AshcroftDiagnostics"/> when a fallback happens.
+/// Resolves typefaces from a <see cref="Theme"/> and per-element overrides. The default face is
+/// the embedded Noto Sans (<see cref="EmbeddedFonts"/>), so output is identical on every machine;
+/// a requested family that isn't installed silently falls back to it — libraries shouldn't crash
+/// a build over a font. The chosen family is reported to <see cref="AshcroftDiagnostics"/> when a
+/// fallback happens.
 /// </summary>
 internal sealed class FontResolver : IDisposable
 {
-    private static readonly string[] FallbackChain = { "Segoe UI", "Helvetica Neue" };
-
     private readonly SKFontManager _fontManager = SKFontManager.Default;
     private readonly Theme _theme;
     private readonly Dictionary<(string family, int weight), SKTypeface> _cache = new();
@@ -39,30 +38,25 @@ internal sealed class FontResolver : IDisposable
         var requested = familyOverride
                         ?? (_theme.FontFamily.Length > 0 ? _theme.FontFamily : null);
 
-        var key = (requested ?? "", weight);
+        // Nothing requested: the embedded default, identical on every machine.
+        if (requested is null)
+            return EmbeddedFonts.SansForWeight(weight);
+
+        var key = (requested, weight);
         if (_cache.TryGetValue(key, out var cached))
             return cached;
 
         var style = StyleFor(weight);
-        SKTypeface? resolved = null;
+        var tf = SKTypeface.FromFamilyName(requested, style.Weight, SKFontStyleWidth.Normal, style.Slant);
+        var resolved = tf is not null && tf.FamilyName.Equals(requested, StringComparison.OrdinalIgnoreCase)
+            ? tf
+            : EmbeddedFonts.SansForWeight(weight);
 
-        // Walk the explicit chain, accepting only an exact family match.
-        foreach (var family in Candidates(requested))
+        if (!ReferenceEquals(resolved, tf))
         {
-            var tf = SKTypeface.FromFamilyName(family, style.Weight, SKFontStyleWidth.Normal, style.Slant);
-            if (tf is not null && tf.FamilyName.Equals(family, StringComparison.OrdinalIgnoreCase))
-            {
-                resolved = tf;
-                break;
-            }
-        }
-
-        // Nothing matched exactly — take the platform default sans.
-        resolved ??= SKTypeface.FromFamilyName(null, style.Weight, SKFontStyleWidth.Normal, style.Slant)
-                     ?? SKTypeface.Default;
-
-        if (requested is not null && !resolved.FamilyName.Equals(requested, StringComparison.OrdinalIgnoreCase))
+            tf?.Dispose(); // substituted face we won't use
             AshcroftDiagnostics.Report($"Font family '{requested}' was not found; using '{resolved.FamilyName}' instead.");
+        }
 
         _cache[key] = resolved;
         return resolved;
@@ -75,20 +69,26 @@ internal sealed class FontResolver : IDisposable
         if (_fallbackCache.TryGetValue(key, out var cached))
             return cached;
 
-        var style = StyleFor(weight);
-        var tf = _fontManager.MatchCharacter(null, style.Weight, SKFontStyleWidth.Normal, style.Slant, null, codepoint)
+        // Embedded faces first (emoji, then Japanese) so the common cases never depend on the
+        // host's font inventory; other scripts still resolve from the system when present.
+        SKTypeface? tf;
+        if (EmbeddedFonts.Emoji.GetGlyph(codepoint) != 0)
+        {
+            tf = EmbeddedFonts.Emoji;
+        }
+        else if (EmbeddedFonts.JpForWeight(weight).GetGlyph(codepoint) != 0)
+        {
+            tf = EmbeddedFonts.JpForWeight(weight);
+        }
+        else
+        {
+            var style = StyleFor(weight);
+            tf = _fontManager.MatchCharacter(null, style.Weight, SKFontStyleWidth.Normal, style.Slant, null, codepoint)
                  ?? _fontManager.MatchCharacter(codepoint);
+        }
 
         _fallbackCache[key] = tf;
         return tf;
-    }
-
-    private IEnumerable<string> Candidates(string? requested)
-    {
-        if (!string.IsNullOrEmpty(requested))
-            yield return requested;
-        foreach (var f in FallbackChain)
-            yield return f;
     }
 
     private static (SKFontStyleWeight Weight, SKFontStyleSlant Slant) StyleFor(int weight)
@@ -96,10 +96,13 @@ internal sealed class FontResolver : IDisposable
 
     public void Dispose()
     {
+        // Embedded faces are process-wide singletons shared by every resolver — never dispose them.
         foreach (var tf in _cache.Values)
-            tf.Dispose();
+            if (!EmbeddedFonts.Owns(tf))
+                tf.Dispose();
         foreach (var tf in _fallbackCache.Values)
-            tf?.Dispose();
+            if (tf is not null && !EmbeddedFonts.Owns(tf))
+                tf.Dispose();
         _fileTypeface?.Dispose();
         _cache.Clear();
         _fallbackCache.Clear();

@@ -129,6 +129,37 @@ public class TextShapingTests
     }
 
     [Fact]
+    public void Default_typeface_is_embedded_noto_sans_on_every_platform()
+    {
+        var (r, shaper) = NewShaper();
+        using (r)
+        using (shaper)
+        {
+            // Medium reports "Noto Sans Medium" (non-RIBBI naming), hence StartsWith.
+            Assert.StartsWith("Noto Sans", r.Resolve(null, 400).FamilyName);
+            Assert.StartsWith("Noto Sans", r.Resolve(null, 500).FamilyName);
+            Assert.StartsWith("Noto Sans", r.Resolve(null, 700).FamilyName);
+        }
+    }
+
+    [Fact]
+    public void Emoji_and_japanese_fall_back_to_embedded_faces()
+    {
+        var (r, shaper) = NewShaper();
+        using (r)
+        using (shaper)
+        {
+            var rocket = r.ResolveFallback(0x1F680, 400);
+            Assert.NotNull(rocket);
+            Assert.True(rocket!.GetGlyph(0x1F680) != 0, "embedded emoji face should cover U+1F680");
+
+            var kanji = r.ResolveFallback('東', 700);
+            Assert.NotNull(kanji);
+            Assert.True(kanji!.GetGlyph('東') != 0, "embedded JP face should cover 東");
+        }
+    }
+
+    [Fact]
     public void Lines_carry_positive_metrics()
     {
         var (r, shaper) = NewShaper();

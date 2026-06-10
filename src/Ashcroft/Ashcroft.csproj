@@ -19,6 +19,13 @@
     <PackageReference Include="SkiaSharp.HarfBuzz" Version="3.119.4" />
   </ItemGroup>
 
+  <!-- Bundled default fonts (Noto Sans / Color Emoji / Sans JP, all OFL) so rendering is
+       deterministic on machines with no usable system fonts. OFL.txt ships in the package. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Fonts\*.ttf;Fonts\*.otf" LogicalName="Ashcroft.Fonts.%(Filename)%(Extension)" />
+    <None Include="Fonts\OFL.txt" Pack="true" PackagePath="" />
+  </ItemGroup>
+
   <ItemGroup>
     <InternalsVisibleTo Include="Ashcroft.Tests" />
   </ItemGroup>

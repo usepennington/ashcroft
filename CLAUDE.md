@@ -26,7 +26,7 @@ dotnet run -- diag warnings # link / xref / :symbol health check
 
 ## Snapshot tests
 
-`SnapshotTests` are self-seeding: the first run on a machine writes baselines to `tests/Ashcroft.Tests/Approved/` and passes; later runs pixel-diff against them (mean per-channel tolerance 2.0). Baselines resolve **system fonts**, so they are platform-specific and gitignored-by-intent — after an intentional visual change, delete `Approved/` and re-run to re-seed. A snapshot failure after a layout/text change may be the expected result of your change, not a bug.
+`SnapshotTests` are self-seeding: the first run on a machine writes baselines to `tests/Ashcroft.Tests/Approved/` and passes; later runs pixel-diff against them (mean per-channel tolerance 2.0). Default text renders from the embedded Noto fonts (deterministic), but anti-aliasing and non-bundled-script fallback can still differ per machine, so baselines stay gitignored-by-intent — after an intentional visual change, delete `Approved/` and re-run to re-seed. A snapshot failure after a layout/text change may be the expected result of your change, not a bug.
 
 On Linux/CI, SkiaSharp needs `SkiaSharp.NativeAssets.Linux.NoDependencies` (the test csproj adds it conditionally); a `DllNotFoundException` for libSkiaSharp means that package is missing.
 
@@ -36,7 +36,7 @@ On Linux/CI, SkiaSharp needs `SkiaSharp.NativeAssets.Linux.NoDependencies` (the 
 
 **Render pass** (`Internal/CardRenderer.cs`): create a surface (pre-scaled by the pixel-density factor, so everything downstream works in logical units) → paint the background → `LayoutEngine` measures and positions each anchored stack into `Placed*` records → for each group containing text over an image/lambda background, `ScrimPainter` draws the legibility gradient first → draw elements. Groups render in add-order; no collision handling by design.
 
-**Text** (`Internal/TextShaper.cs`) is the heart of the library: HarfBuzz shaping, greedy wrap on shaped-cluster boundaries, shrink-to-fit (Title steps down to 70% before ellipsizing), and per-run typeface fallback for emoji/CJK. Measurement and drawing share the same shaped glyphs — never measure text any other way. `FontResolver` falls back silently down a chain (requested → Segoe UI → Helvetica Neue → platform sans) and reports fallbacks via `AshcroftDiagnostics`; fonts must not throw.
+**Text** (`Internal/TextShaper.cs`) is the heart of the library: HarfBuzz shaping, greedy wrap on shaped-cluster boundaries, shrink-to-fit (Title steps down to 70% before ellipsizing), and per-run typeface fallback for emoji/CJK. Measurement and drawing share the same shaped glyphs — never measure text any other way. `FontResolver` defaults to the embedded Noto Sans (`Internal/EmbeddedFonts.cs` — bundled Noto Sans/Color Emoji/Sans JP, OFL) so output is machine-independent; a requested family that isn't installed silently falls back to it, reported via `AshcroftDiagnostics`; fonts must not throw. Embedded faces are process-wide singletons — never dispose them.
 
 **Conventions that carry the design:**
 - Everything under `Internal/` stays `internal` (tests reach it via `InternalsVisibleTo`). The public API surface is exactly what `spec.md` lists — additions are a spec change first.

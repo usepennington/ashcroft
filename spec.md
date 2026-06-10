@@ -144,8 +144,8 @@ Per-element overrides ride on optional parameters; card-wide changes go through 
 // Card-wide
 .Theme(new Theme
 {
-    FontFamily = "Inter",                  // resolved via SKFontManager; falls back through
-                                           //   "Segoe UI" → "Helvetica Neue" → sans-serif default
+    FontFamily = "Inter",                  // resolved via SKFontManager; falls back to the
+                                           //   embedded Noto Sans when not installed
     FontPath   = "assets/Inter.ttf",       // optional: load an exact file instead
     TextColor  = "#f8fafc",
     Scale      = 1.1f                      // multiplies the whole type scale
@@ -174,7 +174,8 @@ This is the part SkiaSharp alone gets wrong and the reason HarfBuzzSharp is in t
 - **Shaping.** All text runs through a HarfBuzz shaper (`SKShaper` from SkiaSharp.HarfBuzz, wrapped to support our wrapping logic). Kerning pairs, ligatures, Arabic/Indic shaping, and combining diacritics all render correctly.
 - **Wrapping** is greedy word-wrap on shaped-cluster boundaries, measured with shaped (not per-glyph-advance) widths so the wrap point is honest.
 - **Shrink-to-fit.** `Title` tries its default size first; if the text exceeds its max line count, it steps the font size down (to a floor of 70% of the default) before falling back to ellipsis on the last line. This keeps long titles on the card without the user thinking about it.
-- **Fallback fonts.** When the primary typeface lacks a glyph (emoji, CJK in a Latin face), we ask `SKFontManager` for a fallback typeface per run, so `"Shipping 🚀 to 東京"` renders rather than tofu-boxing. Runs are split per resolved typeface before shaping.
+- **Fallback fonts.** When the primary typeface lacks a glyph (emoji, CJK in a Latin face), we fall back per run — first to the bundled Noto Color Emoji and Noto Sans JP faces, then to `SKFontManager` for other scripts — so `"Shipping 🚀 to 東京"` renders rather than tofu-boxing on any machine. Runs are split per resolved typeface before shaping.
+- **Bundled fonts.** The assembly embeds Noto Sans (400/500/700), Noto Color Emoji, and Noto Sans JP (400/700) — all OFL-licensed (`Fonts/OFL.txt` ships in the package; ~20 MB embedded). The default typeface is the embedded Noto Sans on every platform, so a card renders pixel-identically on a dev laptop, CI, or a bare container. Korean/Chinese and other scripts beyond the bundle still resolve from system fonts when present.
 - **Baseline math.** Stack layout uses font metrics (ascent/descent), not glyph bounds, so multi-line spacing is stable regardless of which glyphs appear.
 
 ## Public API Surface (complete for v1)
@@ -252,7 +253,7 @@ public sealed record TextStyle
 
 public sealed record Theme
 {
-    public string  FontFamily { get; init; } = "";   // "" → platform sans-serif fallback chain
+    public string  FontFamily { get; init; } = "";   // "" → embedded Noto Sans default
     public string? FontPath   { get; init; }
     public string  TextColor  { get; init; } = "#ffffff";
     public float   Scale      { get; init; } = 1.0f;
@@ -323,7 +324,7 @@ Groups render in the order they were added; later groups draw on top. No constra
 ## Error Handling
 
 - Missing background/element image file → `FileNotFoundException` at render time with the offending path in the message.
-- Unresolvable font family → silent fallback down the chain (design tools warn; libraries shouldn't crash a build pipeline over a font), but the resolved family is exposed for diagnostics via `AshcroftDiagnostics` logging hooks (v1: simple `Action<string>` you can attach).
+- Unresolvable font family → silent fallback to the embedded Noto Sans default (design tools warn; libraries shouldn't crash a build pipeline over a font), but the resolved family is exposed for diagnostics via `AshcroftDiagnostics` logging hooks (v1: simple `Action<string>` you can attach).
 - Empty card (no content groups) renders the background alone — valid, not an error.
 - Text that cannot fit even after shrink + ellipsis (pathological `MaxWidth`) renders its first line ellipsized; never throws.
 

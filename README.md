@@ -28,9 +28,12 @@ SkiaSharp ships native binaries per platform. On Windows and macOS they come in 
 
 ```sh
 dotnet add package SkiaSharp.NativeAssets.Linux.NoDependencies
+dotnet add package HarfBuzzSharp.NativeAssets.Linux
 ```
 
-Use `SkiaSharp.NativeAssets.Linux` (without `.NoDependencies`) only if you also want the fontconfig/freetype system dependencies pulled in. For slim containers, `.NoDependencies` plus a font package is usually what you want. This is the single most common support question for every Skia-based library — handle it up front.
+Use `SkiaSharp.NativeAssets.Linux` (without `.NoDependencies`) only if you also want the fontconfig/freetype system dependencies pulled in. This is the single most common support question for every Skia-based library — handle it up front.
+
+**Fonts need no setup.** Ashcroft embeds Noto Sans (the default typeface), Noto Color Emoji, and Noto Sans JP — all OFL-licensed — so text, emoji, and Japanese render identically on a bare container, CI runner, or your laptop with zero system fonts installed. Other scripts (Korean, Chinese, Arabic, …) and any `Theme.FontFamily` you request by name still resolve from system fonts when present, falling back to the bundled Noto Sans otherwise.
 
 ## Why HarfBuzz
 
@@ -100,7 +103,7 @@ Pin a vertical **stack** to one of nine anchors. Alignment is inherited from the
 ```csharp
 .Theme(new Theme
 {
-    FontFamily = "Inter",            // resolved via SKFontManager; falls back Segoe UI → Helvetica Neue → sans
+    FontFamily = "Inter",            // resolved via SKFontManager; falls back to the embedded Noto Sans
     FontPath   = "assets/Inter.ttf", // optional: load an exact file
     TextColor  = "#f8fafc",
     Scale      = 1.1f                // multiplies the whole type scale
@@ -141,6 +144,6 @@ dotnet build Ashcroft.slnx
 dotnet test  Ashcroft.slnx
 ```
 
-Snapshot baselines under `tests/Ashcroft.Tests/Approved/` are self-seeding and resolve **system fonts**, so they are platform-specific. Delete that folder to re-seed after an intentional visual change or on a new OS.
+Snapshot baselines under `tests/Ashcroft.Tests/Approved/` are self-seeding: the first run on a machine writes them, later runs pixel-diff against them. Delete that folder to re-seed after an intentional visual change.
 
 See [`spec.md`](spec.md) for the full v1 specification.

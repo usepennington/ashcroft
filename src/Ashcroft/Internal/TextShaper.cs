@@ -233,10 +233,12 @@ internal sealed class TextShaper : IDisposable
         var current = primary;
         foreach (var rune in text.EnumerateRunes())
         {
-            // Whitespace stays with the open run; supported runes use the primary; the rest fall back.
+            // Whitespace always shapes with the primary face — a fallback face's space advance can
+            // be wildly different (emoji fonts give a space the width of an emoji). Supported runes
+            // use the primary; the rest fall back.
             SKTypeface want;
             if (Rune.IsWhiteSpace(rune))
-                want = sb.Length == 0 ? primary : current;
+                want = primary;
             else if (primary.GetGlyph(rune.Value) != 0)
                 want = primary;
             else

@@ -150,6 +150,21 @@ public static class CardSamples
                 .Meta("Theme.FontPath · any TTF or OTF"));
     }
 
+    // Per-element weight and tracking via Text(): the bundled default is a variable Noto Sans, so
+    // Weight is a continuous 100–900 axis and LetterSpacing tracks any run. One typeface covers a
+    // whole specimen — and measurement follows the weight, so wrapping and centering stay honest.
+    public static CardBuilder WeightsAndSpacing()
+    {
+        return SocialCard.Create()
+            .Background(Backgrounds.LinearGradient("#0b1020", "#1e293b"))
+            .At(Anchor.MiddleLeft, s => s
+                .Gap(10)
+                .Text("VARIABLE  WEIGHT", new TextStyle { Size = 24, Weight = 600, LetterSpacing = 8, Color = "#7dd3fc" })
+                .Text("Light when it whispers", new TextStyle { Size = 58, Weight = 300, Color = "#e2e8f0" })
+                .Text("Black when it shouts", new TextStyle { Size = 58, Weight = 900, Color = "#f8fafc" })
+                .Text("one font · 100–900 · tracked to taste", new TextStyle { Size = 22, Weight = 400, LetterSpacing = 2, Color = "#94a3b8" }));
+    }
+
     // The override knobs in one card: wider padding, a capped text column that forces the
     // wrap, a looser gap, and a rounded-rect image pinned to the opposite edge.
     public static CardBuilder FineTuning()

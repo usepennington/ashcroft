@@ -175,7 +175,7 @@ This is the part SkiaSharp alone gets wrong and the reason HarfBuzzSharp is in t
 - **Wrapping** is greedy word-wrap on shaped-cluster boundaries, measured with shaped (not per-glyph-advance) widths so the wrap point is honest.
 - **Shrink-to-fit.** `Title` tries its default size first; if the text exceeds its max line count, it steps the font size down (to a floor of 70% of the default) before falling back to ellipsis on the last line. This keeps long titles on the card without the user thinking about it.
 - **Fallback fonts.** When the primary typeface lacks a glyph (emoji, CJK in a Latin face), we fall back per run — first to the bundled Noto Color Emoji and Noto Sans JP faces, then to `SKFontManager` for other scripts — so `"Shipping 🚀 to 東京"` renders rather than tofu-boxing on any machine. Runs are split per resolved typeface before shaping.
-- **Bundled fonts.** The assembly embeds Noto Sans (400/500/700), Noto Color Emoji, and Noto Sans JP (400/700) — all OFL-licensed (`Fonts/OFL.txt` ships in the package; ~20 MB embedded). The default typeface is the embedded Noto Sans on every platform, so a card renders pixel-identically on a dev laptop, CI, or a bare container. Korean/Chinese and other scripts beyond the bundle still resolve from system fonts when present.
+- **Bundled fonts.** The assembly embeds a variable Noto Sans (`wght` 100–900), Noto Color Emoji, and Noto Sans JP (400/700) — all OFL-licensed (`Fonts/OFL.txt` ships in the package; ~20 MB embedded). Per-element `Weight` instances the variable face along its `wght` axis, so any weight 100–900 renders distinctly. The default typeface is the embedded Noto Sans on every platform, so a card renders pixel-identically on a dev laptop, CI, or a bare container. Korean/Chinese and other scripts beyond the bundle still resolve from system fonts when present.
 - **Baseline math.** Stack layout uses font metrics (ascent/descent), not glyph bounds, so multi-line spacing is stable regardless of which glyphs appear.
 
 ## Public API Surface (complete for v1)
@@ -243,7 +243,7 @@ public sealed record TextStyle
 {
     public string? FontFamily { get; init; }    // null → theme font
     public float   Size { get; init; } = 30;
-    public int     Weight { get; init; } = 400; // 100–900, mapped to SKFontStyleWeight
+    public int     Weight { get; init; } = 400; // 100–900; drives the embedded font's wght axis (named fonts: SKFontStyleWeight)
     public string  Color { get; init; } = "#ffffff";
     public float   LineHeight { get; init; } = 1.35f;
     public int     MaxLines { get; init; } = 2;

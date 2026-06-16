@@ -195,6 +195,23 @@ Samples/CardSamples.cs > CardSamples.CustomFont
 
 </div>
 
+## Weight and letter-spacing
+
+The bundled default is a **variable** Noto Sans, so `Weight` is a continuous knob from 100 to 900 —
+not a handful of presets. Pair it with `LetterSpacing` on a `Text()` and one typeface covers a whole
+specimen: a wide-tracked label, a hairline subhead, a heavy headline. Because shaping is
+weight-aware, measurement follows the weight too, so wrapping and centering stay honest at every step:
+
+<div class="sample">
+
+```csharp:symbol,bodyonly
+Samples/CardSamples.cs > CardSamples.WeightsAndSpacing
+```
+
+![A type specimen mixing a letter-spaced label with light and black weights of one variable font](/samples/weights.png)
+
+</div>
+
 ## Fine-tuning the layout
 
 The defaults — 64px padding, 12px gap, text wrapping at the card width — are tuned for the common

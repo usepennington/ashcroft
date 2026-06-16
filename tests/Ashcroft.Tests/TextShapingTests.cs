@@ -143,6 +143,28 @@ public class TextShapingTests
     }
 
     [Fact]
+    public void Embedded_default_varies_glyph_weight_across_the_range()
+    {
+        var (r, shaper) = NewShaper();
+        using (r)
+        using (shaper)
+        {
+            float Width(int weight) =>
+                shaper.ShapeLine("Weight", new TextStyle { Size = 80, Weight = weight }, 80).Width;
+
+            // Heavier weights shape wider on the embedded variable Noto Sans. Before the fix the
+            // default font had only a few static buckets, so most weights collapsed to one face
+            // and these advances were identical.
+            Assert.True(Width(900) > Width(100), "weight 900 should shape wider than weight 100");
+            Assert.True(Width(700) > Width(300), "weight 700 should shape wider than weight 300");
+
+            // Semi-light (300) must resolve to its own instance, distinct from regular (400) —
+            // the reported bug was that every weight rendered the same.
+            Assert.False(ReferenceEquals(r.Resolve(null, 300), r.Resolve(null, 400)));
+        }
+    }
+
+    [Fact]
     public void Emoji_and_japanese_fall_back_to_embedded_faces()
     {
         var (r, shaper) = NewShaper();

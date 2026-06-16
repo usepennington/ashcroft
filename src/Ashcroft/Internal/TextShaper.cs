@@ -1,6 +1,5 @@
 using System.Text;
 using SkiaSharp;
-using SkiaSharp.HarfBuzz;
 
 namespace Ashcroft.Internal;
 
@@ -32,7 +31,7 @@ internal sealed class TextShaper : IDisposable
     private const float ShrinkStep = 0.05f; // 5% steps down to the 70% floor
 
     private readonly FontResolver _resolver;
-    private readonly Dictionary<SKTypeface, SKShaper> _shapers = new();
+    private readonly Dictionary<SKTypeface, HarfBuzzShaper> _shapers = new();
 
     public TextShaper(FontResolver resolver) => _resolver = resolver;
 
@@ -183,27 +182,22 @@ internal sealed class TextShaper : IDisposable
 
         foreach (var (segment, face) in SplitTypefaceRuns(text, style.FontFamily, style.Weight))
         {
-            using var font = new SKFont(face, size);
-            var shaper = GetShaper(face);
-            var result = shaper.Shape(segment, font);
+            using var font = new SKFont(face, size); // for vertical metrics; shaping is HarfBuzz's job
+            var (glyphs, shaped, runWidth) = GetShaper(face).Shape(segment, size);
 
             var metrics = font.Metrics;
             ascent = MathF.Max(ascent, -metrics.Ascent);
             descent = MathF.Max(descent, metrics.Descent);
 
-            var codepoints = result.Codepoints;
-            var points = result.Points;
-            var glyphs = new ushort[codepoints.Length];
-            var positions = new SKPoint[points.Length];
-            for (var i = 0; i < glyphs.Length; i++)
+            var positions = new SKPoint[shaped.Length];
+            for (var i = 0; i < positions.Length; i++)
             {
-                glyphs[i] = (ushort)codepoints[i];
-                positions[i] = new SKPoint(points[i].X + penX + style.LetterSpacing * globalGlyph, points[i].Y);
+                positions[i] = new SKPoint(shaped[i].X + penX + style.LetterSpacing * globalGlyph, shaped[i].Y);
                 globalGlyph++;
             }
 
-            runs.Add(new ShapedRun(face, glyphs, positions, result.Width));
-            penX += result.Width;
+            runs.Add(new ShapedRun(face, glyphs, positions, runWidth));
+            penX += runWidth;
         }
 
         var width = penX + style.LetterSpacing * Math.Max(0, globalGlyph - 1);
@@ -265,11 +259,11 @@ internal sealed class TextShaper : IDisposable
     private static bool SameFace(SKTypeface a, SKTypeface b)
         => ReferenceEquals(a, b) || a.FamilyName == b.FamilyName;
 
-    private SKShaper GetShaper(SKTypeface face)
+    private HarfBuzzShaper GetShaper(SKTypeface face)
     {
         if (!_shapers.TryGetValue(face, out var shaper))
         {
-            shaper = new SKShaper(face);
+            shaper = new HarfBuzzShaper(face);
             _shapers[face] = shaper;
         }
         return shaper;

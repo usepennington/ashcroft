@@ -15,8 +15,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="SkiaSharp" Version="3.119.4" />
-    <PackageReference Include="SkiaSharp.HarfBuzz" Version="3.119.4" />
+    <PackageReference Include="SkiaSharp" Version="4.148.0-rc.1.2" />
+    <PackageReference Include="SkiaSharp.HarfBuzz" Version="4.148.0-rc.1.2" />
   </ItemGroup>
 
   <!-- Bundled default fonts (Noto Sans / Color Emoji / Sans JP, all OFL) so rendering is

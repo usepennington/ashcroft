@@ -39,6 +39,29 @@ public class TextShapingTests
     }
 
     [Fact]
+    public void Balanced_wrap_evens_out_a_greedy_orphan()
+    {
+        var (r, shaper) = NewShaper();
+        using (r)
+        using (shaper)
+        {
+            var style = new TextStyle { Size = 24, MaxLines = 9 };
+            float Width(int words) =>
+                shaper.ShapeLine(string.Join(' ', Enumerable.Repeat("ashcroft", words)), style, 24).Width;
+
+            // A width that fits exactly four identical words but not five.
+            var maxWidth = (Width(4) + Width(5)) / 2f;
+
+            // Six words: greedy packs 4 + 2 (a lopsided last line); balance evens it to 3 + 3.
+            var result = shaper.Shape(string.Join(' ', Enumerable.Repeat("ashcroft", 6)), style, 1f, maxWidth);
+
+            Assert.Equal(2, result.Lines.Count);
+            Assert.Equal(3, result.Lines[0].Text.Split(' ').Length);
+            Assert.Equal(3, result.Lines[1].Text.Split(' ').Length);
+        }
+    }
+
+    [Fact]
     public void Explicit_newline_forces_a_break()
     {
         var (r, shaper) = NewShaper();
@@ -139,6 +162,33 @@ public class TextShapingTests
             Assert.StartsWith("Noto Sans", r.Resolve(null, 400).FamilyName);
             Assert.StartsWith("Noto Sans", r.Resolve(null, 500).FamilyName);
             Assert.StartsWith("Noto Sans", r.Resolve(null, 700).FamilyName);
+        }
+    }
+
+    [Fact]
+    public void Theme_FontFiles_registers_face_by_family_name_before_system_lookup()
+    {
+        // Extract the embedded Noto Sans to a real file so we can register it without depending on
+        // any system-installed or doc-site font. It reports family "Noto Sans".
+        var path = Path.Combine(Path.GetTempPath(), $"ashcroft-fontfiles-{Guid.NewGuid():N}.ttf");
+        using (var src = typeof(Theme).Assembly.GetManifestResourceStream("Ashcroft.Fonts.NotoSans-VariableFont_wght.ttf")!)
+        using (var dst = File.Create(path))
+            src.CopyTo(dst);
+        try
+        {
+            using var r = new FontResolver(new Theme { FontFiles = [path] });
+
+            var byName = r.Resolve("Noto Sans", 400);
+            Assert.Equal("Noto Sans", byName.FamilyName);
+            // The registered file face short-circuits before the embedded singleton (and any system font).
+            Assert.False(EmbeddedFonts.Owns(byName));
+
+            // No override still yields the embedded default, untouched by the registration.
+            Assert.True(EmbeddedFonts.Owns(r.Resolve(null, 400)));
+        }
+        finally
+        {
+            File.Delete(path);
         }
     }
 

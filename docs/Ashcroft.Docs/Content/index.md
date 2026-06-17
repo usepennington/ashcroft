@@ -9,9 +9,12 @@ image below it was produced by running that exact sample through Ashcroft** — 
 screenshots here, only live output.
 
 > [!IMPORTANT]
-> On **Linux / Docker / CI**, SkiaSharp needs its native binaries explicitly:
-> `dotnet add package SkiaSharp.NativeAssets.Linux.NoDependencies`. Windows and macOS get them in
-> the box. This is the #1 support question for every Skia-based library.
+> On **Linux / Docker / CI** the native binaries ship in separate packages and Ashcroft can't
+> reference them for you — add **both** `SkiaSharp.NativeAssets.Linux.NoDependencies` **and**
+> `HarfBuzzSharp.NativeAssets.Linux` to your startup project. Windows and macOS bundle both in the
+> box. The HarfBuzz one is the easy miss: without it Skia paints the background fine and then the
+> first line of text throws. Full setup and the exact versions are in
+> [Running on Linux, Docker, or CI](#running-on-linux-docker-or-ci).
 
 ## The whole pitch
 
@@ -195,6 +198,24 @@ Samples/CardSamples.cs > CardSamples.CustomFont
 
 </div>
 
+## Mixing fonts in one card
+
+`Theme.FontPath` sets a single face for the whole card, but a display headline over body text wants
+*two*. `Theme.FontFiles` registers any number of bundled files under the family name each one reports,
+so a per-element `FontFamily` resolves to the bundled file **before** any system lookup — deterministic
+on every machine, with nothing installed. Here the headline is Space Grotesk from a shipped file while
+the body and meta stay on the embedded Noto Sans default:
+
+<div class="sample">
+
+```csharp:symbol,bodyonly
+Samples/CardSamples.cs > CardSamples.MixedFonts
+```
+
+![A Space Grotesk display headline over Noto Sans body text in one card](/samples/mixed-fonts.png)
+
+</div>
+
 ## Weight and letter-spacing
 
 The bundled default is a **variable** Noto Sans, so `Weight` is a continuous knob from 100 to 900 —
@@ -242,3 +263,42 @@ using SKImage img = card.ToImage();        // escape hatch for further Skia work
 
 `.Scale(2)` renders at 2× pixel density with all layout values multiplied — crisp on high-DPI
 surfaces. PNG is the default and the recommendation for OG images.
+
+## Running on Linux, Docker, or CI
+
+Ashcroft renders with SkiaSharp and shapes **every** string with HarfBuzz, so it needs two native
+libraries at runtime: `libSkiaSharp` and `libHarfBuzzSharp`. On Windows and macOS both arrive
+automatically with the `SkiaSharp` and `SkiaSharp.HarfBuzz` packages Ashcroft already depends on, so
+there's nothing to do. **On Linux those base packages contain no native binaries** — you add the
+platform-specific native asset packages yourself, and you need *both*. NuGet won't pull them in
+transitively, and Ashcroft deliberately doesn't list them as dependencies: doing so would force the
+Linux `.so` files onto every Windows and macOS consumer that never needs them.
+
+Add both to the project that actually builds or runs your app — your web app or worker, not a class
+library in the middle:
+
+```xml
+<ItemGroup>
+  <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.148.0-rc.1.2" />
+  <PackageReference Include="HarfBuzzSharp.NativeAssets.Linux" Version="14.2.0-rc.1.2" />
+</ItemGroup>
+```
+
+A few things that trip people up:
+
+- **Two packages, two version lines.** SkiaSharp and HarfBuzzSharp version independently — Skia is
+  on `4.148.x` here while HarfBuzzSharp is on `14.2.x`. Don't try to align the numbers; use the
+  versions Ashcroft is built against (above, matching what the `SkiaSharp` / `SkiaSharp.HarfBuzz`
+  packages resolve to).
+- **The HarfBuzz native is the one people forget.** With only the Skia asset present, the
+  background and shapes draw and then the first run of text throws
+  `DllNotFoundException: libHarfBuzzSharp`. The mirror symptom, `DllNotFoundException:
+  libSkiaSharp`, means the Skia asset is the one missing.
+- **`.NoDependencies` vs plain.** `SkiaSharp.NativeAssets.Linux.NoDependencies` is the headless
+  build and the right default for containers and CI — it needs no system `fontconfig` installed.
+  Reach for plain `SkiaSharp.NativeAssets.Linux` only if you specifically want fontconfig-based
+  system-font discovery; Ashcroft's embedded fonts render without it.
+- **Build host vs deploy target.** The references above are unconditional, so they're included no
+  matter where you build — the right call when you build on Windows or macOS and deploy to Linux. If
+  you only ever build on the same OS you ship to, you can guard the group with
+  `Condition="$([MSBuild]::IsOSPlatform('Linux'))"` to keep the Linux `.so` out of other outputs.

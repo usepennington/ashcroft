@@ -146,7 +146,8 @@ Per-element overrides ride on optional parameters; card-wide changes go through 
 {
     FontFamily = "Inter",                  // resolved via SKFontManager; falls back to the
                                            //   embedded Noto Sans when not installed
-    FontPath   = "assets/Inter.ttf",       // optional: load an exact file instead
+    FontPath   = "assets/Inter.ttf",       // optional: load an exact file as one card-wide face
+    FontFiles  = ["assets/SpaceGrotesk.ttf"], // register files by name → mix several bundled faces
     TextColor  = "#f8fafc",
     Scale      = 1.1f                      // multiplies the whole type scale
 })
@@ -172,7 +173,7 @@ using SKImage img = card.ToImage();      // escape hatch for further Skia work
 This is the part SkiaSharp alone gets wrong and the reason HarfBuzzSharp is in the package:
 
 - **Shaping.** All text runs through a HarfBuzz shaper (`SKShaper` from SkiaSharp.HarfBuzz, wrapped to support our wrapping logic). Kerning pairs, ligatures, Arabic/Indic shaping, and combining diacritics all render correctly.
-- **Wrapping** is greedy word-wrap on shaped-cluster boundaries, measured with shaped (not per-glyph-advance) widths so the wrap point is honest.
+- **Wrapping** is balanced word-wrap on shaped-cluster boundaries, measured with shaped (not per-glyph-advance) widths so the wrap point is honest. Greedy packing fixes the line count (the vertical budget shrink-to-fit depends on); the breaks within that budget are then re-chosen to minimise total raggedness — the score-based "balance" of CSS `text-wrap` — so lines come out near-equal in width and a long title never strands a one-word last line.
 - **Shrink-to-fit.** `Title` tries its default size first; if the text exceeds its max line count, it steps the font size down (to a floor of 70% of the default) before falling back to ellipsis on the last line. This keeps long titles on the card without the user thinking about it.
 - **Fallback fonts.** When the primary typeface lacks a glyph (emoji, CJK in a Latin face), we fall back per run — first to the bundled Noto Color Emoji and Noto Sans JP faces, then to `SKFontManager` for other scripts — so `"Shipping 🚀 to 東京"` renders rather than tofu-boxing on any machine. Runs are split per resolved typeface before shaping.
 - **Bundled fonts.** The assembly embeds a variable Noto Sans (`wght` 100–900), Noto Color Emoji, and Noto Sans JP (400/700) — all OFL-licensed (`Fonts/OFL.txt` ships in the package; ~20 MB embedded). Per-element `Weight` instances the variable face along its `wght` axis, so any weight 100–900 renders distinctly. The default typeface is the embedded Noto Sans on every platform, so a card renders pixel-identically on a dev laptop, CI, or a bare container. Korean/Chinese and other scripts beyond the bundle still resolve from system fonts when present.
@@ -254,7 +255,8 @@ public sealed record TextStyle
 public sealed record Theme
 {
     public string  FontFamily { get; init; } = "";   // "" → embedded Noto Sans default
-    public string? FontPath   { get; init; }
+    public string? FontPath   { get; init; }         // a single card-wide face loaded from a file
+    public IReadOnlyList<string> FontFiles { get; init; } = []; // files registered by reported family name; a per-element/theme FontFamily resolves to these before the system
     public string  TextColor  { get; init; } = "#ffffff";
     public float   Scale      { get; init; } = 1.0f;
 }

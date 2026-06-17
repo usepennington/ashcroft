@@ -25,6 +25,7 @@ public static class SampleGallery
             ["themed"]     = CardSamples.Themed,
             ["colors"]     = CardSamples.ElementColors,
             ["font"]       = CardSamples.CustomFont,
+            ["mixed-fonts"] = CardSamples.MixedFonts,
             ["weights"]    = CardSamples.WeightsAndSpacing,
             ["fine-tuning"] = CardSamples.FineTuning,
         };

@@ -150,6 +150,22 @@ public static class CardSamples
                 .Meta("Theme.FontPath · any TTF or OTF"));
     }
 
+    // Two bundled faces in one card. Theme.FontFiles registers each file under the family name it
+    // reports, so a per-element FontFamily resolves to the bundled file before any system lookup —
+    // deterministic everywhere, nothing installed. The headline is Space Grotesk; the body and meta
+    // stay on the embedded Noto Sans default. (Theme.FontPath, by contrast, sets one card-wide face.)
+    public static CardBuilder MixedFonts()
+    {
+        return SocialCard.Create()
+            .Theme(new Theme { FontFiles = ["assets/SpaceGrotesk-Bold.ttf"] })
+            .Background(Backgrounds.LinearGradient("#0f172a", "#312e81"))
+            .At(Anchor.MiddleLeft, s => s
+                .Gap(10)
+                .Text("Two faces, one card", new TextStyle { FontFamily = "Space Grotesk", Size = 64, Weight = 700, Color = "#f8fafc" })
+                .Subtitle("This line is the embedded Noto Sans — humanist, even, built for reading at small sizes.")
+                .Meta("Display: Space Grotesk (bundled file) · Body: Noto Sans (embedded)", color: "#a5b4fc"));
+    }
+
     // Per-element weight and tracking via Text(): the bundled default is a variable Noto Sans, so
     // Weight is a continuous 100–900 axis and LetterSpacing tracks any run. One typeface covers a
     // whole specimen — and measurement follows the weight, so wrapping and centering stay honest.

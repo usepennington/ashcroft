@@ -21,7 +21,7 @@ internal sealed record ShapedText(IReadOnlyList<ShapedLine> Lines, float Size, f
 }
 
 /// <summary>
-/// HarfBuzz-backed shaping with honest (shaped-advance) measurement, greedy word wrap on cluster
+/// HarfBuzz-backed shaping with honest (shaped-advance) measurement, balanced word wrap on cluster
 /// boundaries, shrink-to-fit, ellipsis, and per-typeface fallback runs. Measurement and drawing
 /// share the same shaped glyphs, so what was measured is exactly what gets drawn.
 /// </summary>
@@ -100,6 +100,27 @@ internal sealed class TextShaper : IDisposable
             return;
         }
 
+        // Greedy packing establishes the minimum feasible line count — the vertical budget the
+        // shrink-to-fit / MaxLines machinery above is built around. If a single word is wider than
+        // the line it must hard-break, which only greedy does, so use its result verbatim; otherwise
+        // re-break across that same number of lines for balance.
+        var greedy = GreedyWrap(words, style, size, maxWidth, out var hadOverflow);
+        var chosen = hadOverflow || greedy.Count <= 1
+            ? greedy
+            : BalanceLines(words, style, size, maxWidth, greedy.Count);
+
+        foreach (var line in chosen)
+            lines.Add(ShapeLine(line, style, size));
+    }
+
+    /// <summary>
+    /// Classic greedy word wrap: pack each line as full as it goes, hard-breaking any single word
+    /// wider than the line. Returns the line strings and reports whether a hard-break happened.
+    /// </summary>
+    private List<string> GreedyWrap(string[] words, TextStyle style, float size, float maxWidth, out bool hadOverflow)
+    {
+        hadOverflow = false;
+        var lines = new List<string>();
         string? current = null;
         foreach (var word in words)
         {
@@ -112,7 +133,7 @@ internal sealed class TextShaper : IDisposable
 
             if (current is not null)
             {
-                lines.Add(ShapeLine(current, style, size));
+                lines.Add(current);
                 current = null;
             }
 
@@ -123,15 +144,87 @@ internal sealed class TextShaper : IDisposable
             else
             {
                 // A single word wider than the line: hard-break it on rune boundaries.
+                hadOverflow = true;
                 var pieces = BreakWord(word, style, size, maxWidth);
                 for (var i = 0; i < pieces.Count - 1; i++)
-                    lines.Add(ShapeLine(pieces[i], style, size));
+                    lines.Add(pieces[i]);
                 current = pieces[^1];
             }
         }
 
         if (current is not null)
-            lines.Add(ShapeLine(current, style, size));
+            lines.Add(current);
+        return lines;
+    }
+
+    /// <summary>
+    /// Re-break <paramref name="words"/> into exactly <paramref name="lineCount"/> lines that minimise
+    /// total raggedness — the score-based "balance" of CSS <c>text-wrap</c>. Each line is penalised by
+    /// the square of its shortfall from the full width, so slack spreads evenly and the lines come out
+    /// near-equal (which also kills one-word orphans). Constraining to greedy's own line count keeps
+    /// the vertical footprint — and therefore shrink-to-fit and MaxLines — untouched; only the
+    /// horizontal break points move. A Knuth–Plass dynamic program; <c>n</c> is tiny for card text.
+    /// </summary>
+    private List<string> BalanceLines(string[] words, TextStyle style, float size, float maxWidth, int lineCount)
+    {
+        var n = words.Length;
+        var target = maxWidth; // balance penalises every line's shortfall from the full width
+        var width = new float?[n, n + 1]; // memoised shaped width of words[i..j)
+
+        float LineWidth(int i, int j)
+        {
+            if (width[i, j] is { } cached)
+                return cached;
+            var measured = Measure(string.Join(' ', words[i..j]), style, size);
+            width[i, j] = measured;
+            return measured;
+        }
+
+        // f[k, i] = least total cost to set words[i..n) in exactly k lines; back[k, i] = the chosen
+        // first break j. f[lineCount, 0] is finite because greedy is itself a feasible witness.
+        const float inf = float.PositiveInfinity;
+        var f = new float[lineCount + 1, n + 1];
+        var back = new int[lineCount + 1, n + 1];
+        for (var i = 0; i <= n; i++)
+            f[0, i] = i == n ? 0f : inf;
+
+        for (var k = 1; k <= lineCount; k++)
+        {
+            f[k, n] = inf; // no words left can't fill a line
+            for (var i = n - 1; i >= 0; i--)
+            {
+                var best = inf;
+                var bestJ = i + 1;
+                for (var j = i + 1; j <= n; j++)
+                {
+                    var w = LineWidth(i, j);
+                    if (w > maxWidth)
+                        break; // appending more words only widens the line, and stays infeasible
+                    var rest = f[k - 1, j];
+                    if (float.IsPositiveInfinity(rest))
+                        continue;
+                    var d = target - w;
+                    var total = d * d + rest;
+                    if (total < best)
+                    {
+                        best = total;
+                        bestJ = j;
+                    }
+                }
+                f[k, i] = best;
+                back[k, i] = bestJ;
+            }
+        }
+
+        var result = new List<string>(lineCount);
+        var start = 0;
+        for (var k = lineCount; k >= 1; k--)
+        {
+            var end = back[k, start];
+            result.Add(string.Join(' ', words[start..end]));
+            start = end;
+        }
+        return result;
     }
 
     private List<string> BreakWord(string word, TextStyle style, float size, float maxWidth)

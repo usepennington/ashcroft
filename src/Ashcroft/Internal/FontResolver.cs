@@ -11,11 +11,17 @@ namespace Ashcroft.Internal;
 /// </summary>
 internal sealed class FontResolver : IDisposable
 {
+    // The OpenType 'wght' variation axis a variable file font is instanced along.
+    private static readonly SKFourByteTag WeightAxis = SKFourByteTag.Parse("wght");
+
     private readonly SKFontManager _fontManager = SKFontManager.Default;
     private readonly Theme _theme;
     private readonly Dictionary<(string family, int weight), SKTypeface> _cache = new();
     private readonly Dictionary<(int codepoint, int weight), SKTypeface?> _fallbackCache = new();
     private readonly SKTypeface? _fileTypeface;
+    // Set when the theme font file is variable along 'wght'; per-weight clones are cut from it.
+    private readonly SKFontVariationAxis? _fileWeightAxis;
+    private readonly Dictionary<int, SKTypeface> _fileByWeight = new();
 
     public FontResolver(Theme theme)
     {
@@ -25,15 +31,18 @@ internal sealed class FontResolver : IDisposable
             _fileTypeface = SKTypeface.FromFile(theme.FontPath);
             if (_fileTypeface is null)
                 AshcroftDiagnostics.Report($"Font file '{theme.FontPath}' could not be loaded; falling back to system fonts.");
+            else
+                _fileWeightAxis = FindWeightAxis(_fileTypeface);
         }
     }
 
     /// <summary>Resolve the primary typeface for a text run.</summary>
     public SKTypeface Resolve(string? familyOverride, int weight)
     {
-        // An explicit theme font file wins unless the element overrode the family by name.
+        // An explicit theme font file wins unless the element overrode the family by name. A
+        // variable file font is instanced at the requested weight; a static one ignores it.
         if (_fileTypeface is not null && familyOverride is null)
-            return _fileTypeface;
+            return FileForWeight(weight);
 
         var requested = familyOverride
                         ?? (_theme.FontFamily.Length > 0 ? _theme.FontFamily : null);
@@ -91,6 +100,35 @@ internal sealed class FontResolver : IDisposable
         return tf;
     }
 
+    /// <summary>
+    /// The theme font file at <paramref name="weight"/>. When the file is a variable font with a
+    /// 'wght' axis, clone it along that axis (clamped to the axis range) and cache per weight, just
+    /// like <see cref="EmbeddedFonts.SansForWeight"/>; the clone carries its variation position so
+    /// <see cref="HarfBuzzShaper"/> shapes — not merely rasterizes — at that weight. A static file
+    /// has no axis to vary, so its single face serves every weight.
+    /// </summary>
+    private SKTypeface FileForWeight(int weight)
+    {
+        if (_fileWeightAxis is not { } axis)
+            return _fileTypeface!;
+
+        var clamped = Math.Clamp(weight, (int)axis.Min, (int)axis.Max);
+        if (_fileByWeight.TryGetValue(clamped, out var cached))
+            return cached;
+
+        var clone = _fileTypeface!.Clone([new SKFontVariationPositionCoordinate { Axis = WeightAxis, Value = clamped }]);
+        _fileByWeight[clamped] = clone;
+        return clone;
+    }
+
+    private static SKFontVariationAxis? FindWeightAxis(SKTypeface typeface)
+    {
+        foreach (var axis in typeface.VariationDesignParameters ?? [])
+            if (axis.Tag == WeightAxis)
+                return axis;
+        return null;
+    }
+
     private static (SKFontStyleWeight Weight, SKFontStyleSlant Slant) StyleFor(int weight)
         => ((SKFontStyleWeight)Math.Clamp(weight, 100, 900), SKFontStyleSlant.Upright);
 
@@ -103,8 +141,11 @@ internal sealed class FontResolver : IDisposable
         foreach (var tf in _fallbackCache.Values)
             if (tf is not null && !EmbeddedFonts.Owns(tf))
                 tf.Dispose();
+        foreach (var tf in _fileByWeight.Values)
+            tf.Dispose();
         _fileTypeface?.Dispose();
         _cache.Clear();
         _fallbackCache.Clear();
+        _fileByWeight.Clear();
     }
 }

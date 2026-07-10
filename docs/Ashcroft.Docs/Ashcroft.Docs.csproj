@@ -8,9 +8,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Pennington" Version="0.1.0-alpha.0.296" />
-    <PackageReference Include="Pennington.MonorailCss" Version="0.1.0-alpha.0.296" />
-    <PackageReference Include="Pennington.TreeSitter" Version="0.1.0-alpha.0.296" />
+    <PackageReference Include="Pennington" Version="0.1.7" />
+    <PackageReference Include="Pennington.MonorailCss" Version="0.1.7" />
+    <PackageReference Include="Pennington.TreeSitter" Version="0.1.7" />
   </ItemGroup>
 
   <ItemGroup>

@@ -15,7 +15,7 @@ dotnet test tests/Ashcroft.Tests --filter "FullyQualifiedName~SnapshotTests"   #
 dotnet test tests/Ashcroft.Tests --filter "Minimum_viable_card"               # one test
 ```
 
-Library and tests pin SDK 10.0.300 via the root `global.json`. The docs site is separate: it requires a **.NET 11 preview SDK** (its own `docs/Ashcroft.Docs/global.json`) and runs from that directory:
+Library and tests pin SDK 10.0.300 via the root `global.json`. The docs site is separate: it requires a **.NET 11 SDK** (its own `docs/Ashcroft.Docs/global.json`) and runs from that directory:
 
 ```sh
 cd docs/Ashcroft.Docs
